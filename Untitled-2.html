@@ -1,100 +1,161 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Enable Notifications</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FCM — Minimal Popup</title>
   <style>
-    body{font-family:system-ui,Arial;background:#071428;color:#e6eef6;padding:40px;text-align:center}
-    button{background:#2dd4bf;border:0;padding:12px 18px;border-radius:10px;color:#042027;font-weight:700;cursor:pointer}
-    pre{background:rgba(0,0,0,0.25);padding:12px;border-radius:8px;max-width:760px;margin:18px auto;text-align:left}
-    code{color:#94a3b8}
+    :root{--bg:#071028;--accent1:#06b6d4;--accent2:#2563eb;--glass:rgba(255,255,255,0.04)}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    body{background:linear-gradient(180deg,var(--bg),#051226);display:flex;align-items:center;justify-content:center;color:#eaf4ff}
+    .card{width:94%;max-width:920px;padding:22px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid var(--glass)}
+    .overlay{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.75));display:grid;place-items:center;z-index:60}
+    .modal{width:360px;max-width:calc(100% - 32px);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;box-shadow:0 12px 40px rgba(2,6,23,0.8);border:1px solid rgba(255,255,255,0.03);text-align:center}
+    .btns{display:flex;gap:8px;justify-content:center}
+    .btn{padding:10px 12px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#022}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit}
+    .tokenBox{margin-top:12px;padding:10px;border-radius:8px;background:transparent;border:1px dashed rgba(255,255,255,0.04);min-height:64px;word-break:break-all}
+    .small{font-size:13px;color:rgba(230,238,248,0.7)}
+    .floating{position:fixed;right:18px;bottom:18px;background:linear-gradient(90deg,var(--accent1),var(--accent2));padding:10px 12px;border-radius:999px;color:#022;font-weight:700;cursor:pointer;border:0}
+    .modal{transform:translateY(12px);opacity:0;transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .28s}
+    .overlay.show .modal{transform:none;opacity:1}
+    @media (max-width:420px){.modal{width:92%}}
   </style>
 </head>
 <body>
-  <h1>🔔 Enable Notifications</h1>
-  <p>Click to allow notifications — your subscription will be saved in Firestore collection <code>tocken</code>.</p>
-  <button id="btn-subscribe">Enable Notifications</button>
-  <p>Your device UID: <code id="uidEl">—</code></p>
-  <pre id="log">Ready</pre>
+  <div class="card">
+    <h1 style="margin:0 0 8px 0;font-size:18px">FCM — Minimal Popup Mode</h1>
+    <div class="small">This page requests notification permission and displays the generated FCM token. (HTTPS required.)</div>
+  </div>
 
+  <button id="openModal" class="floating" title="Open token popup">Get Token</button>
+
+  <div id="overlay" class="overlay" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>Allow notifications?</h2>
+      <p>We need permission to create a push token for this browser. The token will show here only.</p>
+
+      <div class="btns">
+        <button id="allowBtn" class="btn primary">Allow</button>
+        <button id="denyBtn" class="btn ghost">Deny</button>
+      </div>
+
+      <div id="tokenArea" style="display:none" aria-live="polite">
+        <div class="tokenBox" id="tokenBox">—</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
+          <button id="copyToken" class="btn ghost">Copy</button>
+          <button id="closeBtn" class="btn ghost">Close</button>
+        </div>
+      </div>
+
+      <div id="status" class="small" style="margin-top:10px">Status: <span id="statusText">idle</span></div>
+    </div>
+  </div>
+
+  <!-- Firebase (modular) ES module CDN -->
   <script type="module">
-    // ---------- CLIENT CONFIG ----------
-    const firebaseConfig = {
-      apiKey: "AIzaSyC-ft54KwehdTIsV93xBjLbd0nMeZ4ibDw",
-      authDomain: "akshay-b744a.firebaseapp.com",
-      projectId: "akshay-b744a",
-      storageBucket: "akshay-b744a.firebasestorage.app",
-      messagingSenderId: "752091661451",
-      appId: "1:752091651451:web:7ccfa46feff8ce87c6808e",
-      measurementId: "G-GKLRSSBRXR"
-    };
+   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAd-SQmyTES3_C_WIjpN557aNvI_vwDmWM",
+  authDomain: "push-1c3e6.firebaseapp.com",
+  projectId: "push-1c3e6",
+  storageBucket: "push-1c3e6.firebasestorage.app",
+  messagingSenderId: "332269974589",
+  appId: "1:332269974589:web:413a4eaa0f0cda2e666654",
+  measurementId: "G-XHE5WVZ8XV"
+};
+    const VAPID_KEY = 'BEvvtJOzrpNmR25o_7g6C7I1hPtd8XEamwEBJo0HWduhRi9kCqpzx5r-yEjTTQ5StFvL1pfE_J76wZc2sT9gxSE';
+    
+//========================================
 
-    // Your VAPID public key (client-side only)
-    const VAPID_PUBLIC_KEY = 'BDUtG4Fe5BEdidnYGx4laC8xyaGwKmVUwWf_rfRfIPERSnIY_wUQcPc-MXzuMIEQ7Y1Lz5EEpGVQEMueGPw5_yU';
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js';
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    const app = initializeApp(FIREBASE_CONFIG);
+    const messaging = getMessaging(app);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // UI refs
+    const overlay = document.getElementById('overlay');
+    const openModal = document.getElementById('openModal');
+    const allowBtn = document.getElementById('allowBtn');
+    const denyBtn = document.getElementById('denyBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const tokenArea = document.getElementById('tokenArea');
+    const tokenBox = document.getElementById('tokenBox');
+    const statusText = document.getElementById('statusText');
+    const copyBtn = document.getElementById('copyToken');
 
-    const logEl = document.getElementById('log');
-    const uidEl = document.getElementById('uidEl');
-    const BTN = document.getElementById('btn-subscribe');
-    const UID_KEY = 'device_uid_v1';
+    function setStatus(s){ statusText.textContent = s; }
+    function showOverlay(){ overlay.style.display = 'grid'; setTimeout(()=>overlay.classList.add('show'),20); }
+    function hideOverlay(){ overlay.classList.remove('show'); setTimeout(()=>overlay.style.display='none',300); }
+    function setToken(t){ tokenBox.textContent = t || '—'; }
 
-    function log(v){ console.log(v); logEl.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2); }
-    function genUID(){ return Math.floor(10000000 + Math.random()*90000000).toString(); }
-    function getUID(){ let id = localStorage.getItem(UID_KEY); if(!id){ id = genUID(); localStorage.setItem(UID_KEY, id); } return id; }
-
-    function urlBase64ToUint8Array(base64String){
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
-      const rawData = atob(base64);
-      const out = new Uint8Array(rawData.length);
-      for (let i=0;i<rawData.length;++i) out[i]=rawData.charCodeAt(i);
-      return out;
-    }
-
+    // REGISTER SERVICE WORKER PROPERLY (must be a separate file)
     async function registerSW(){
-      if(!('serviceWorker' in navigator)) throw new Error('No service worker support');
-      const reg = await navigator.serviceWorker.register('/push/sw.js');
-      return reg;
-    }
-
-    async function saveToFirestore(uid, subscription){
-      const subJson = subscription && subscription.toJSON ? subscription.toJSON() : subscription;
-      await setDoc(doc(db, 'tocken', uid), { uid, subscription: subJson, savedAt: serverTimestamp() });
-    }
-
-    async function subscribeFlow(){
-      try{
-        log('Registering service worker...');
-        const reg = await registerSW();
-
-        if(!confirm('Tap OK to allow notifications (browser permission will appear).')) { log('Cancelled'); return; }
-
-        const perm = await Notification.requestPermission();
-        if(perm !== 'granted'){ log('Permission not granted'); return; }
-
-        log('Subscribing to push...');
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
-
-        const uid = getUID();
-        await saveToFirestore(uid, sub);
-        uidEl.textContent = uid;
-        log({ msg: 'Subscribed and saved', uid, endpoint: sub.endpoint });
-      }catch(err){
-        console.error(err);
-        log('Error: ' + (err.message || err));
+      if('serviceWorker' in navigator){
+        try{
+          // register the separate file at root: /firebase-messaging-sw.js
+          const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          console.log('SW registered', reg);
+          return reg;
+        }catch(e){
+          console.warn('SW register failed', e);
+          throw e;
+        }
+      }else{
+        throw new Error('Service workers unsupported');
       }
     }
 
-    BTN.addEventListener('click', subscribeFlow);
-    // init
-    uidEl.textContent = getUID();
-    log('Ready');
+    async function requestPermissionAndGetToken(){
+      try{
+        setStatus('requesting permission');
+        const permission = await Notification.requestPermission();
+        setStatus(permission);
+        if(permission !== 'granted'){ setStatus('permission denied'); return null; }
+
+        setStatus('registering service worker');
+        await registerSW();
+
+        setStatus('retrieving token');
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+        if(token){ setToken(token); tokenArea.style.display = 'block'; setStatus('token received'); return token; }
+        else{ setStatus('no token — check config'); return null; }
+      }catch(err){ console.error(err); setStatus('error'); return null; }
+    }
+
+    // Button bindings
+    openModal.addEventListener('click', ()=>{ showOverlay(); });
+    allowBtn.addEventListener('click', async ()=>{
+      allowBtn.disabled = true;
+      setStatus('processing...');
+      await requestPermissionAndGetToken();
+      allowBtn.disabled = false;
+    });
+    denyBtn.addEventListener('click', ()=>{ setStatus('denied'); hideOverlay(); });
+    closeBtn.addEventListener('click', ()=>{ hideOverlay(); });
+
+    copyBtn.addEventListener('click', async ()=>{
+      try{ await navigator.clipboard.writeText(tokenBox.textContent); setStatus('copied'); }
+      catch(e){ setStatus('copy failed'); }
+    });
+
+    // On load: show minimal popup if permission is default; if already granted, try silent token fetch
+    window.addEventListener('load', async ()=>{
+      try{
+        const p = Notification.permission;
+        if(p === 'default'){ showOverlay(); }
+        else if(p === 'granted'){
+          setStatus('getting token silently');
+          try{ await registerSW(); const t = await getToken(messaging, { vapidKey: VAPID_KEY }); if(t){ setToken(t); tokenArea.style.display='block'; setStatus('token ready'); } }
+          catch(e){ console.warn(e); setStatus('silent failed'); }
+        } else { setStatus('permission denied'); }
+
+        // foreground messages
+        onMessage(messaging, (payload)=>{ console.log('Foreground message:', payload); alert('Message while page focused:\\n' + (payload?.notification?.title || JSON.stringify(payload))); });
+      }catch(e){ console.error(e); }
+    });
   </script>
 </body>
 </html>
