@@ -1,39 +1,26 @@
-// public/sw.js
-self.addEventListener('install', event => {
-  self.skipWaiting();
-});
+// firebase-messaging-sw.js
+// Place this at the root: https://yourdomain.com/firebase-messaging-sw.js
 
-self.addEventListener('activate', event => {
-  self.clients.claim();
-});
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
-self.addEventListener('push', event => {
-  let data = { title: 'Notification', body: 'You have a message', url: '/'};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data.body = event.data.text();
-    }
-  }
-  const options = {
-    body: data.body,
-    data: { url: data.url },
-    // icon: '/icon.png', // optionally
-    // badge: '/badge.png'
-  };
-  event.waitUntil(self.registration.showNotification(data.title, options));
-});
+// Use the same firebaseConfig used in index.html
+const firebaseConfig = {
+  apiKey: "AIzaSyAd-SQmyTES3_C_WIjpN557aNvI_vwDmWM",
+  authDomain: "push-1c3e6.firebaseapp.com",
+  projectId: "push-1c3e6",
+  storageBucket: "push-1c3e6.firebasestorage.app",
+  messagingSenderId: "332269974589",
+  appId: "1:332269974589:web:413a4eaa0f0cda2e666654",
+  measurementId: "G-XHE5WVZ8XV"
+};
 
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      for (const client of windowClients) {
-        if (client.url === url && 'focus' in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(url);
-    })
-  );
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  const title = payload.notification?.title || 'Background Message';
+  const options = { body: payload.notification?.body || '', icon: '/favicon.ico' };
+  self.registration.showNotification(title, options);
 });
