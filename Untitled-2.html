@@ -96,7 +96,8 @@ const firebaseConfig = {
       if('serviceWorker' in navigator){
         try{
           // register the separate file at root: /firebase-messaging-sw.js
-          const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+         await navigator.serviceWorker.register('/push/firebase-messaging-sw.js');
+
           console.log('SW registered', reg);
           return reg;
         }catch(e){
@@ -159,3 +160,4 @@ const firebaseConfig = {
   </script>
 </body>
 </html>
+
